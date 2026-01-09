@@ -1,0 +1,271 @@
+MediScan Al
+Early Disease Detection From Medical Imaging
+Empowering Healthcare In Resource-Limited Settings
+DA-IICT Hackathon 2026
+Team: Nishant Makwana (Leader), Rajan Parmar, Deep Parmar, Hemakshi Rathod, Hetvi Parmar
+
+
+
+The Healthcare Crisis
+Why Early Disease Detection Matters
+10M+
+TB Cases Annually
+2.5M
+Pneumonia Deaths
+60%
+Lack Expert Care
+The Reality: In Resource-Limited Healthcare Settings, Access To Skilled Radiologists And Advanced Diagnostic Tools Is Severely Restricted. Manual Analysis Of Medical Images Is Slow, Requires Specialized Expertise, And Often Leads To Delayed
+Diagnosis.
+Critical Challenges
+Limited Access To Trained Radiologists In Rural And Remote Areas
+Time-Consuming Manual Interpretation Of X-Rays And CT Scans
+High Risk Of Misdiagnosis Due To Human Error And Fatigue
+Delayed Treatment Leading To Disease Progression And Mortality
+
+
+
+
+
+Our Solution: MediScan Al
+Al-Powered Early Disease Detection
+An Intelligent System That Processes Medical Images To Automatically Detect Early Signs Of Tuberculosis, Pneumonia, And Bone Fractures With Explainable Al Reasoning.
+Core Capabilities
+Automated Detection: Real-Time Analysis Of X-Rays And CT Scans With High Accuracy
+Contour Mapping: Visual Overlays Highlighting Abnormal Regions For Easy Interpretation
+Explainable AI: Clear Reasoning Behind Every Diagnostic Decision
+Multi-Disease Support: Detection Of TB, Pneumonia, And Fractures In A Single System
+Resource-Efficient: Designed To Work On Limited Computational Infrastructure
+
+
+
+
+
+System Architecture
+End-To-End Al Pipeline
+Image Upload
+(X-Ray/CT)
+Contour
+Mapping
+Preprocessing
+& Enhancement
+CNN Model
+Analysis
+Disease
+Classification
+Explainable Results + Visual
+Feedback
+Feature
+Extraction
+Pipeline Features: The System Uses Advanced Deep Learning Architectures With Attention Mechanisms, Processes Images Through Multiple Stages Of Enhancement, And Generates Human-Interpretable Outputs With Highlighted Regions Of
+Concern.
+
+
+
+
+Technology Stack
+Cutting-Edge Al & Computer Vision
+TensorFlow / PyTorch
+Deep Learning Framework For CNN Model Development And Training
+OpenCV
+Image Preprocessing, Contour Detection, And Visualization
+ResNet/ DenseNet
+Pre-Trained CNN Architectures For Feature Extraction
+Flask / FastAPI
+Backend API For Model Inference And Result Delivery
+Grad-CAM
+Explainable Al For Visualizing Model Decision Regions
+React.js
+Interactive Frontend For Image Upload And Result Visualization
+Why These Technologies? Our Stack Combines State-Of-The-Art Deep Learning With Proven Computer Vision Techniques, Ensuring Both High Accuracy And Interpretability While Maintaining Computational Efficiency For Deployment In
+Resource-Constrained Environments
+
+
+
+
+
+
+Deep Learning Model Architecture
+Multi-Task Learning For Disease Detection
+Model Innovations
+Transfer Learning: Pre-Trained On ImageNet, Fine-Tuned On Medical Datasets
+Attention Mechanism : Focuses On Diagnostically Relevant Image Regions
+Multi-Task Learning: Simultaneous Classification And Segmentation
+MediScan Al
+Hybrid CNN Architecture
+Input Layer → Image (512x512 Grayscale)
+ResNet-50 Backbone - Feature Extraction
+Attention Module Focus On Relevant Regions
+Multi-Head Classification - TB/Pneumonia / Fracture
+Segmentation Branch Contour Mapping
+Output → Class Probability + Heatmap + Contours
+
+
+
+
+
+
+
+Contour Mapping Technology
+Precise Localization of Abnormalities
+What Is Contour Mapping? Advanced Image Processing Technique That Creates Visual Overlays On Medical Scans, Clearly Delineating Abnormal Regions Such As Lesions, Infiltrates, And Fractures.
+Technical Implementation
+U-Net Segmentation: Pixel-Level Classification Of Abnormal Tissue
+Edge Detection: Canny And Sobel Operators For Precise Boundaries
+Morphological Operations: Noise Reduction And Contour Refinement
+Color-Coded Overlays: Red For High-Risk, Yellow For Moderate Concern
+Visualization Pipeline :
+Raw Image → Probability Heatmap → Threshold Application → Contour Detection → Overlay Generation → Final Annotated Image
+Clinical Impact: Healthcare Workers Can Instantly Identify Problem Areas Without Extensive Radiology Training, Reducing Diagnostic Time From Hours To Seconds.
+
+
+
+
+
+
+
+
+Explainable AI (XAI)
+Building Trust Through Transparency
+"Black Box" Models Are Not Acceptable In Healthcare. Our System Explains Every Decision It Makes.
+XAI Techniques Implemented
+Grad-CАM
+Gradient-Weighted Class Activation Mapping Highlights Which Regions Influenced The Diagnosis
+LIME
+Local Interpretable Model-Agnostic Explanations For Feature Importance
+Attention Maps
+Visual Representation Of Where The Model "Looks" During Analysis
+Feature Attribution
+Quantifies The Contribution Of Each Image Region To Final Prediction
+Why It Matters: Explainability Increases Clinician Trust, Enables Validation Of Model Decisions, Facilitates Learning For Healthcare Workers, And Ensures Regulatory Compliance For Medical Al Systems.
+
+
+
+
+
+
+
+Datasets & Training Strategy
+High-Quality Medical Image Databases
+1. ChestX-ray14 (NIH Dataset)
+https://nihcc.app.box.com/v/ChestXray-NIHCC
+112,120 Frontal-View X-Ray Images From 30,805 Patients With 14 Disease Labels Including Pneumonia And Tuberculosis
+2. TBX11K Dataset
+https://mmcheng.net/tb/
+11,200 Chest X-Rays With Bounding Box Annotations For Tuberculosis Detection
+3. RSNA Pneumonia Detection Challenge
+https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
+30,000 Chest X-Ray Images With Pneumonia Annotations And Bounding Boxes
+4. MURA (Musculoskeletal Radiographs)
+https://stanfordmlgroup.github.io/competitions/mura/
+40,561 Radiographic Images For Bone Fracture Detection Across Multiple Body Parts
+
+
+
+
+
+
+Data Processing Pipeline
+Ensuring Robustness Across Image Qualities
+Preprocessing Techniques
+CLAHE: Contrast Limited Adaptive Histogram Equalization For Enhanced Visibility
+Normalization: Standardizing Pixel Intensity Across Different Imaging Devices
+Denoising: Gaussian And Bilateral Filtering To Remove Artifacts
+Resizing & Padding: Uniform Input Dimensions While Preserving Aspect Ratio
+Data Augmentation for Generalization
+Rotation: ±15 Degrees To Simulate Different Patient Positioning
+Zoom & Scale: 0.9-1.1x To Handle Varying Distances
+Brightness & Contrast : Simulating Different X-Ray Machine Settings
+Elastic Deformation: Mimicking Anatomical Variations
+Result: Our Model Remains Robust To Variations In Image Quality, Resolution, Noise Levels, And Acquisition Parameters-Critical For Deployment In Resource-Limited Settings With Diverse Equipment.
+
+
+
+
+
+
+Expected Performance Metrics
+Clinical-Grade Accuracy Standards
+95%+
+Accuracy
+Disease-Specific Performance Goals
+Tuberculosis Detection
+AUC: 0.96 | Sensitivity: 94% | Specificity: 95%
+Fracture Detection
+AUC: 0.97 | Sensitivity: 95% | Specificity: 96%
+93%+
+Sensitivity
+Pneumonia Detection
+AUC: 0.95 | Sensitivity: 92% | Specificity: 94%
+Processing Speed
+< 3 Seconds Per Image On Standard Hardware
+Benchmark Comparison: Our Target Metrics Match Or Exceed Performance Of Radiologists In Similar Settings, With The Added Advantage Of 24/7 Availability And Zero Fatigue.
+
+
+
+
+
+Real-World Impact
+Transforming Healthcare Delivery
+Access to Care
+Bringing Expert-Level Diagnostics To Rural Clinics And Remote Healthcare Facilities Where Radiologists Are Unavailable
+Speed & Efficiency
+Reducing Diagnostic Time From Hours To Seconds, Enabling Faster Treatment Decisions And Better Patient Outcomes
+Cost Reduction
+Eliminating The Need For Expensive Specialist Consultations And Reducing Misdiagnosis Costs By Up To 70%
+Global Scalability
+Deployable Across Diverse Populations And Healthcare Systems, From Urban Hospitals To Mobile Health Units
+Estimated Impact: 50,000+ Patients Could Receive Timely Diagnosis Annually In A Single District, Potentially Saving Thousands Of Lives Through Early Intervention
+
+
+
+
+
+
+Phase 1: Foundation (Hours 0-8)
+Data Pipeline Setup : Download And Preprocess Datasets (NIH, TBX11K, RSNA, MURA)
+Environment Configuration: Setup TensorFlow/PyTorch Environment With GPU Support
+Base Model Development: Implement ResNet-50 Backbone With Transfer Learning
+Phase 2: Core Development (Hours 8-24)
+Model Training : Train Multi-Task Learning Model On Combined Datasets
+Contour Mapping: Implement U-Net Segmentation And OpenCV Contour Detection
+XAI Integration: Add Grad-CAM And Attention Visualization
+Backend API: Develop Flask/FastAPI Endpoints For Inference
+Phase 3: Integration & Polish (Hours 24-36)
+Frontend Development: Build React.js Interface With Image Upload And Visualization
+Testing & Validation : Evaluate Model Performance On Test Sets
+Demo Preparation: Create Compelling Demonstration Scenarios
+
+
+
+
+
+Meet Our Team
+Passionate Innovators Driving Change
+MediScan Al
+Rajan Parmar
+Deep Learning Engineer
+Hemakshi Rathod
+Backend & API Developer
+Nishant Makwana
+Team Leader | Al/ML Architect
+Deep Parmar
+Computer Vision Specialist
+Hetvi Parmar
+Frontend & UI/UX Designer
+Our Mission: To Leverage Cutting-Edge Al Technology To Democratize Healthcare Access And Save Lives In Underserved Communities Worldwide.
+Together, We Bring Expertise In Machine Learning, Computer Vision, Full-Stack Development, And A Shared Passion For Healthcare Innovation.
+
+
+
+
+Let's Save Lives Together
+MediScan Al : Bringing World-Class Diagnostics
+To Every Corner Of The Globe
+<3s
+Processing Time
+Ready To Transform Healthcare?
+Join Us In Making Expert Medical Diagnosis Accessible To All
+Team MediScan AI | DA-IICT Hackathon 2026
+Nishant Rajan. Deep Hemakshi. Hetvi
+MediScan Al
+"Al That Cares, Technology That Heals, Innovation That Saves Lives"
