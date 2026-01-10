@@ -1,7 +1,3 @@
-"""
-MURA (Musculoskeletal Radiographs) Inference Module
-Detects abnormalities in musculoskeletal X-rays
-"""
 
 import os
 import sys
@@ -11,13 +7,11 @@ import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
 
-# Add MURA dataset path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'datasets', 'DenseNet-MURA'))
 
 try:
     from densenet import densenet169
 except ImportError:
-    # Fallback if densenet module not available
     densenet169 = None
 
 class MURAPredictor:
@@ -41,10 +35,8 @@ class MURAPredictor:
         self.load_model()
     
     def load_model(self):
-        """Load the MURA DenseNet model"""
         try:
             if densenet169 is None:
-                # Use torchvision DenseNet as fallback
                 import torchvision.models as models
                 try:
                     self.model = models.densenet169(weights=None)
@@ -80,7 +72,6 @@ class MURAPredictor:
             raise
     
     def preprocess_image(self, image_path):
-        """Preprocess image for MURA"""
         normalize = transforms.Normalize([0.485, 0.456, 0.406],
                                          [0.229, 0.224, 0.225])
         
@@ -96,12 +87,8 @@ class MURAPredictor:
         return image_tensor.unsqueeze(0)
     
     def predict(self, image_path):
-        """Predict abnormality in musculoskeletal X-ray"""
         try:
-            # Preprocess image
             image_tensor = self.preprocess_image(image_path).to(self.device)
-            
-            # Predict
             with torch.no_grad():
                 output = self.model(image_tensor)
                 out = output
@@ -128,7 +115,6 @@ class MURAPredictor:
             raise Exception(f"Error in MURA prediction: {str(e)}")
 
     def predict_for_frontend(self, image_path):
-        """Predict and format results for frontend React component"""
         try:
             raw_result = self.predict(image_path)
 

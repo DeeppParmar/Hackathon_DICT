@@ -1,16 +1,9 @@
-"""
-Tuberculosis Detection Inference Module
-Detects tuberculosis from chest X-ray images
-"""
 
 import os
 import sys
 import numpy as np
 import cv2
 
-# Add TuberculosisNet dataset path
-tbnet_path = os.path.join(os.path.dirname(__file__), '..', 'datasets', 'TuberculosisNet')
-sys.path.append(tbnet_path)
 
 try:
     import tensorflow as tf
@@ -55,7 +48,6 @@ class TuberculosisPredictor:
         self.load_model()
     
     def load_model(self):
-        """Load the Tuberculosis model"""
         if not TF_AVAILABLE:
             print("TensorFlow not available. Tuberculosis model will use simple inference.")
             return
@@ -65,14 +57,12 @@ class TuberculosisPredictor:
             return
         
         try:
-            # Suppress TensorFlow warnings
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
             if hasattr(tf, 'logging'):
                 tf.logging.set_verbosity(tf.logging.ERROR)
             
             import glob
             
-            # Find checkpoint files
             index_files = sorted(glob.glob(os.path.join(self.model_path, '*.index')))
             meta_files = sorted(glob.glob(os.path.join(self.model_path, '*.meta')))
             
@@ -80,15 +70,12 @@ class TuberculosisPredictor:
                 print(f"No checkpoint index files found in {self.model_path}")
                 return
             
-            # Get checkpoint prefix (remove .index extension)
             ckpt_prefix = index_files[0][:-6]  # Remove '.index'
             
-            # Find meta file
             meta_path = None
             if meta_files:
                 meta_path = meta_files[0]
             else:
-                # Try to find .meta file matching the checkpoint
                 potential_meta = ckpt_prefix + '.meta'
                 if os.path.exists(potential_meta):
                     meta_path = potential_meta
@@ -97,7 +84,7 @@ class TuberculosisPredictor:
                 print(f"No meta file found for checkpoint in {self.model_path}")
                 return
             
-            # Create session and load graph
+        try:
             config = tf.ConfigProto()
             config.gpu_options.allow_growth = True
             self.sess = tf.Session(config=config)
@@ -107,7 +94,6 @@ class TuberculosisPredictor:
             
             graph = tf.get_default_graph()
             
-            # Try to find input tensor
             input_names = ['image:0', 'input:0', 'x:0', 'inputs:0', 'Placeholder:0']
             for name in input_names:
                 try:
@@ -116,7 +102,6 @@ class TuberculosisPredictor:
                 except KeyError:
                     continue
             
-            # Try to find output tensor
             output_names = ['resnet_model/final_dense:0', 'logits:0', 'output:0', 'predictions:0', 'dense/BiasAdd:0', 'fc/BiasAdd:0']
             for name in output_names:
                 try:
@@ -140,7 +125,6 @@ class TuberculosisPredictor:
             self.model_loaded = False
     
     def preprocess_image_fallback(self, image_path):
-        """Fallback preprocessing if TensorFlow preprocessing not available"""
         image = cv2.imread(image_path, 1)
         if image is None:
             raise ValueError(f"Could not read image from {image_path}")
@@ -151,12 +135,9 @@ class TuberculosisPredictor:
         
         return image
     
-    def predict(self, image_path):
-        """Predict tuberculosis from chest X-ray image"""
+        try:
         try:
             if not self.model_loaded or self.sess is None:
-                # Simple image-based heuristic fallback when model not available
-                # This analyzes image brightness patterns common in TB X-rays
                 try:
                     image = cv2.imread(image_path, 0)  # Grayscale
                     if image is not None:
@@ -193,7 +174,6 @@ class TuberculosisPredictor:
                     'is_tuberculosis': False
                 }
             
-            # Preprocess image
             if TF_AVAILABLE and PREPROCESSING_AVAILABLE:
                 try:
                     image = preprocess_image_inference(image_path)
@@ -203,7 +183,6 @@ class TuberculosisPredictor:
             else:
                 image = self.preprocess_image_fallback(image_path)
             
-            # Run inference
             logits = self.sess.run(self.logits_tensor, feed_dict={self.image_tensor: [image]})[0]
             softmax = self.sess.run(tf.nn.softmax(logits))
             pred_class = softmax.argmax()
@@ -226,12 +205,9 @@ class TuberculosisPredictor:
             raise Exception(f"Error in Tuberculosis prediction: {str(e)}")
     
     def predict_for_frontend(self, image_path):
-        """Predict and format results for frontend React component"""
         try:
-            # Get raw predictions
             raw_result = self.predict(image_path)
             
-            # Check if model loaded properly
             if 'error' in raw_result:
                 return [{
                     'disease': 'Model Error',
@@ -241,7 +217,6 @@ class TuberculosisPredictor:
                     'regions': []
                 }]
             
-            # Convert to frontend format
             analysis_results = []
             
             prediction = raw_result.get('prediction', 'Unknown')
@@ -251,7 +226,6 @@ class TuberculosisPredictor:
             is_tb = raw_result.get('is_tuberculosis', False)
             
             if is_tb:
-                # Tuberculosis detected
                 analysis_results.append({
                     'disease': 'Tuberculosis (TB)',
                     'confidence': int(tb_prob * 100),
@@ -259,7 +233,6 @@ class TuberculosisPredictor:
                     'description': 'Active tuberculosis infection detected. Immediate medical consultation and treatment required. Characteristic TB patterns identified in lung tissue.',
                     'regions': ['Lung Parenchyma', 'Apical Regions']
                 })
-                # Add supporting info
                 analysis_results.append({
                     'disease': 'Normal Tissue',
                     'confidence': int(normal_prob * 100),
@@ -268,7 +241,6 @@ class TuberculosisPredictor:
                     'regions': []
                 })
             else:
-                # Normal/No TB detected
                 analysis_results.append({
                     'disease': 'Healthy Scan (TB)',
                     'confidence': int(normal_prob * 100),

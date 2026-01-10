@@ -1,7 +1,3 @@
-"""
-Training Script for All Models
-Trains all 5 models for early disease detection
-"""
 
 import os
 import sys
@@ -10,9 +6,7 @@ import subprocess
 
 def train_chexnet():
     """Train CheXNet model"""
-    print("\n" + "=" * 50)
     print("Training CheXNet Model")
-    print("=" * 50)
     
     chexnet_dir = os.path.join('datasets', 'CheXNet')
     train_script = os.path.join(chexnet_dir, 'train.py')
@@ -39,9 +33,7 @@ def train_chexnet():
 
 def train_mura():
     """Train MURA model"""
-    print("\n" + "=" * 50)
     print("Training MURA Model")
-    print("=" * 50)
     
     mura_dir = os.path.join('datasets', 'DenseNet-MURA')
     train_script = os.path.join(mura_dir, 'main.py')
@@ -64,9 +56,7 @@ def train_mura():
 
 def train_tuberculosis():
     """Train Tuberculosis model"""
-    print("\n" + "=" * 50)
     print("Training Tuberculosis Model")
-    print("=" * 50)
     
     tb_dir = os.path.join('datasets', 'TuberculosisNet')
     train_script = os.path.join(tb_dir, 'train_tbnet.py')
@@ -89,9 +79,7 @@ def train_tuberculosis():
 
 def train_rsna():
     """Train RSNA model"""
-    print("\n" + "=" * 50)
     print("Training RSNA Model")
-    print("=" * 50)
     
     rsna_dir = os.path.join('datasets', 'rsna18')
     train_script = os.path.join(rsna_dir, 'train.sh')
@@ -119,9 +107,7 @@ def train_rsna():
 
 def train_unet():
     """Train UNet model"""
-    print("\n" + "=" * 50)
     print("Training UNet Model")
-    print("=" * 50)
     
     unet_dir = os.path.join('datasets', 'UNet')
     train_script = os.path.join(unet_dir, 'train.py')
@@ -144,9 +130,7 @@ def train_unet():
 
 def train_all():
     """Train all models"""
-    print("=" * 50)
     print("Training All Models for Early Disease Detection")
-    print("=" * 50)
     
     results = {
         'chexnet': train_chexnet(),
@@ -156,9 +140,7 @@ def train_all():
         'unet': train_unet()
     }
     
-    print("\n" + "=" * 50)
-    print("Training Summary:")
-    print("=" * 50)
+    print("\nTraining Summary:")
     for model, success in results.items():
         status = "✓ Success" if success else "✗ Failed"
         print(f"{model.upper()}: {status}")

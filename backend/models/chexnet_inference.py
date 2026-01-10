@@ -1,7 +1,3 @@
-"""
-CheXNet Inference Module
-Chest X-ray disease detection (14 diseases)
-"""
 
 import os
 import sys
@@ -12,7 +8,6 @@ import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
 
-# Add CheXNet dataset path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'datasets', 'CheXNet'))
 
 CLASS_NAMES = ['Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Mass', 
@@ -21,7 +16,6 @@ CLASS_NAMES = ['Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Mass'
 N_CLASSES = 14
 
 class DenseNet121(nn.Module):
-    """Model modified for CheXNet"""
     def __init__(self, out_size):
         super(DenseNet121, self).__init__()
         try:
@@ -48,28 +42,22 @@ class CheXNetPredictor:
         self.load_model()
     
     def load_model(self):
-        """Load the CheXNet model"""
         try:
             self.model = DenseNet121(N_CLASSES)
             
             if os.path.isfile(self.model_path):
                 checkpoint = torch.load(self.model_path, map_location=self.device)
                 
-                # Handle different checkpoint formats
                 if 'state_dict' in checkpoint:
                     state_dict = checkpoint['state_dict']
                 else:
                     state_dict = checkpoint
                 
-                # Remove 'module.' prefix if present (from DataParallel training)
-                # Also add 'densenet121.' prefix if keys don't have it
+                # Remove 'module.' prefix and ensure correct key naming
                 new_state_dict = {}
                 for k, v in state_dict.items():
-                    # Remove 'module.' prefix
                     name = k[7:] if k.startswith('module.') else k
                     
-                    # Add 'densenet121.' prefix if missing (checkpoint uses different naming)
-                    # The model expects 'densenet121.features...' but checkpoint may have 'features...'
                     if not name.startswith('densenet121.'):
                         name = 'densenet121.' + name
                     
@@ -77,9 +65,7 @@ class CheXNetPredictor:
                 
                 load_res = self.model.load_state_dict(new_state_dict, strict=False)
                 
-                # Only raise error if there are missing keys that aren't expected
                 if getattr(load_res, 'missing_keys', None):
-                    # Filter out expected missing keys (like num_batches_tracked)
                     critical_missing = [k for k in load_res.missing_keys 
                                        if 'num_batches_tracked' not in k]
                     if len(critical_missing) > 0:
@@ -100,14 +86,11 @@ class CheXNetPredictor:
             raise
     
     def preprocess_image(self, image_path):
-        """Preprocess image for CheXNet"""
         normalize = transforms.Normalize([0.485, 0.456, 0.406],
                                          [0.229, 0.224, 0.225])
         
-        # Load and preprocess image
         image = Image.open(image_path).convert('RGB')
         
-        # Simple preprocessing without TenCrop for faster inference
         transform = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
@@ -116,25 +99,19 @@ class CheXNetPredictor:
         ])
         
         image_tensor = transform(image)
-        # Add batch dimension
         image_tensor = image_tensor.unsqueeze(0)
         return image_tensor
     
     def predict(self, image_path):
-        """Predict diseases from chest X-ray image"""
         try:
-            # Preprocess image
             image_tensor = self.preprocess_image(image_path)
             
-            # Move to device
             input_var = image_tensor.to(self.device)
             
-            # Predict
             with torch.no_grad():
                 output = self.model(input_var)
                 probabilities = output.cpu().numpy()[0]
             
-            # Format results
             results = {}
             detected_diseases = []
             
@@ -147,7 +124,6 @@ class CheXNetPredictor:
                         'probability': prob
                     })
             
-            # Sort detected diseases by probability
             detected_diseases.sort(key=lambda x: x['probability'], reverse=True)
             
             return {
@@ -162,12 +138,9 @@ class CheXNetPredictor:
             raise Exception(f"Error in CheXNet prediction: {str(e)}")
     
     def predict_for_frontend(self, image_path):
-        """Predict and format results for frontend React component"""
         try:
-            # Get raw predictions
             raw_result = self.predict(image_path)
             
-            # Disease descriptions mapping
             disease_descriptions = {
                 'Atelectasis': 'Collapsed or airless lung tissue detected. May indicate lung compression or obstruction.',
                 'Cardiomegaly': 'Enlarged heart silhouette observed. Could indicate cardiac enlargement or pericardial effusion.',
@@ -185,20 +158,16 @@ class CheXNetPredictor:
                 'Hernia': 'Diaphragmatic hernia or other hernia detected in chest cavity.'
             }
             
-            # Convert to frontend format
             analysis_results = []
             
-            # Get all probabilities
             all_probs = raw_result.get('all_probabilities', {})
             
-            # Sort by probability (highest first)
+        # Sort by probability
             sorted_diseases = sorted(all_probs.items(), key=lambda x: x[1], reverse=True)
             
-            # Determine if healthy (no diseases detected above threshold)
             detected_above_threshold = [d for d, prob in sorted_diseases if prob > 0.5]
             
             if not detected_above_threshold:
-                # Healthy case - show top 3 with status healthy
                 analysis_results.append({
                     'disease': 'Healthy Scan',
                     'confidence': int((1.0 - sorted_diseases[0][1]) * 100) if sorted_diseases else 95,
@@ -206,7 +175,6 @@ class CheXNetPredictor:
                     'description': 'No significant abnormalities detected. Lung fields appear clear. Normal cardiac silhouette.',
                     'regions': []
                 })
-                # Add top diseases as "not detected"
                 for disease, prob in sorted_diseases[:3]:
                     analysis_results.append({
                         'disease': disease.replace('_', ' '),
@@ -215,15 +183,12 @@ class CheXNetPredictor:
                         'description': f'No significant {disease.replace("_", " ").lower()} indicators detected.'
                     })
             else:
-                # Diseases detected - show them first
                 for disease, prob in sorted_diseases:
                     if prob > 0.5:
-                        # Critical if high probability, warning if medium
                         status = 'critical' if prob > 0.75 else 'warning'
                         confidence = int(prob * 100)
                         description = disease_descriptions.get(disease, f'{disease.replace("_", " ")} indicators detected.')
                         
-                        # Add regions based on disease type
                         regions = []
                         if 'Lobe' not in description:
                             if disease in ['Pneumonia', 'Consolidation']:
@@ -241,11 +206,9 @@ class CheXNetPredictor:
                             'regions': regions
                         })
                         
-                        # Limit to top 3 detected diseases
                         if len([r for r in analysis_results if r['status'] != 'healthy']) >= 3:
                             break
                 
-                # Add non-detected diseases to fill up to 3 results
                 for disease, prob in sorted_diseases:
                     if prob <= 0.5 and len(analysis_results) < 3:
                         analysis_results.append({

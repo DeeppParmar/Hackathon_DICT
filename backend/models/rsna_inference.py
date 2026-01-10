@@ -1,7 +1,3 @@
-"""
-RSNA Intracranial Hemorrhage Detection Inference Module
-Detects intracranial hemorrhage from CT scans
-"""
 
 import os
 import sys
@@ -22,16 +18,12 @@ class RSNPredictor:
         self.load_model()
     
     def load_model(self):
-        """Load the RSNA model"""
         try:
-            # Try to load a pretrained model from rsna18 directory
-            # If not available, use a pretrained ResNet as fallback
             model_files = []
             if os.path.exists(self.model_path):
                 model_files = [f for f in os.listdir(self.model_path) if f.endswith('.h5') or f.endswith('.pth')]
             
             if model_files:
-                # Load Keras model if available (requires tensorflow)
                 try:
                     import tensorflow as tf
                     model_file = os.path.join(self.model_path, model_files[0])
@@ -40,7 +32,6 @@ class RSNPredictor:
                 except:
                     pass
             
-            # Use ResNet as fallback for inference
             self.model = models.resnet50(pretrained=True)
             self.model.fc = nn.Linear(self.model.fc.in_features, 1)
             self.model = self.model.to(self.device)
@@ -49,14 +40,12 @@ class RSNPredictor:
             print("Loaded RSNA model (using ResNet fallback)")
         except Exception as e:
             print(f"Error loading RSNA model: {e}")
-            # Create model with pretrained weights as fallback
             self.model = models.resnet50(pretrained=True)
             self.model.fc = nn.Linear(self.model.fc.in_features, 1)
             self.model = self.model.to(self.device)
             self.model.eval()
     
     def preprocess_image(self, image_path):
-        """Preprocess image for RSNA"""
         normalize = transforms.Normalize([0.485, 0.456, 0.406],
                                          [0.229, 0.224, 0.225])
         
@@ -72,15 +61,9 @@ class RSNPredictor:
         return image_tensor.unsqueeze(0)
     
     def predict(self, image_path):
-        """Predict intracranial hemorrhage from CT scan"""
         try:
-            # Preprocess image
-            image_tensor = self.preprocess_image(image_path).to(self.device)
-            
-            # Predict
             with torch.no_grad():
                 output = self.model(image_tensor)
-                # Apply sigmoid for binary classification
                 probability = torch.sigmoid(output).cpu().numpy()[0][0]
             
             is_hemorrhage = probability > 0.5
@@ -98,7 +81,6 @@ class RSNPredictor:
             raise Exception(f"Error in RSNA prediction: {str(e)}")
 
     def predict_for_frontend(self, image_path):
-        """Predict and format results for frontend React component"""
         try:
             raw_result = self.predict(image_path)
 

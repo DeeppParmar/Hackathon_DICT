@@ -1,7 +1,3 @@
-"""
-Flask Backend for Early Disease Detection
-Handles image uploads and routes them to appropriate models
-"""
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -13,7 +9,6 @@ import cv2
 from werkzeug.utils import secure_filename
 import traceback
 
-# Add models directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 
 from models.chexnet_inference import CheXNetPredictor
@@ -23,7 +18,7 @@ from models.rsna_inference import RSNPredictor
 from models.unet_inference import UNetPredictor
 
 app = Flask(__name__)
-# Configure CORS to allow frontend (running on port 8080)
+# CORS for frontend
 CORS(app, origins=["http://localhost:8080", "http://127.0.0.1:8080"], supports_credentials=True, expose_headers=["X-Model-Used"])
 
 # Configuration
@@ -34,10 +29,9 @@ MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
-# Create uploads directory if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialize model predictors (lazy loading)
+# Lazy-loaded predictors
 predictors = {
     'chexnet': None,
     'mura': None,
@@ -164,7 +158,6 @@ def infer_scan_type_from_image(filepath: str, ext: str) -> str:
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
         'message': 'Early Disease Detection API is running'
@@ -172,7 +165,6 @@ def health_check():
 
 @app.route('/models', methods=['GET'])
 def list_models():
-    """List available models"""
     return jsonify({
         'models': [
             {
@@ -208,7 +200,6 @@ def list_models():
 
 @app.route('/predict/<model_name>', methods=['POST'])
 def predict(model_name):
-    """Predict endpoint for a specific model"""
     if model_name not in predictors:
         return jsonify({'error': f'Model {model_name} not found'}), 404
 
@@ -234,7 +225,6 @@ def predict(model_name):
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Get predictor and make prediction
         predictor = get_predictor(model_name)
         result = predictor.predict(filepath)
         
@@ -263,11 +253,9 @@ def predict(model_name):
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    """Main analysis endpoint for frontend - intelligently routes between TB and CheXNet models"""
     if 'image' not in request.files and 'file' not in request.files:
         return jsonify({'error': 'No image file provided'}), 400
     
-    # Handle both 'image' (frontend) and 'file' (alternative) field names
     file = request.files.get('image') or request.files.get('file')
     
     if file.filename == '':
@@ -354,14 +342,12 @@ def analyze():
                 resp.headers['X-Model-Used'] = 'mura'
                 return resp, 500
         
-        # Try TB model first (fast inference)
         try:
             if not model_checkpoint_available('tuberculosis'):
                 raise Exception('Tuberculosis model checkpoint not found')
             tb_predictor = get_predictor('tuberculosis')
             tb_raw = tb_predictor.predict(filepath)
             
-            # If TB is detected with high confidence, return TB results
             if 'is_tuberculosis' in tb_raw and tb_raw['is_tuberculosis']:
                 tb_prob = tb_raw.get('tuberculosis_probability', 0.0)
                 if tb_prob > 0.55:
@@ -388,7 +374,6 @@ def analyze():
             except Exception as mura_error:
                 app.logger.warning(f"MURA model check failed, falling back to CheXNet: {mura_error}")
         
-        # Use CheXNet for comprehensive analysis (default)
         if not model_checkpoint_available('chexnet'):
             os.remove(filepath)
             resp = jsonify(unavailable_model_result('chexnet'))
@@ -423,7 +408,6 @@ def analyze():
 
 @app.route('/predict/all', methods=['POST'])
 def predict_all():
-    """Predict using all models"""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
     
@@ -443,7 +427,6 @@ def predict_all():
         
         results = {}
         
-        # Run predictions for all models
         for model_name in predictors.keys():
             try:
                 if not model_checkpoint_available(model_name):
