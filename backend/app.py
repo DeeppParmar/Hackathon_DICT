@@ -1,6 +1,7 @@
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import os
 import sys
 import importlib.util
@@ -8,6 +9,10 @@ import numpy as np
 import cv2
 from werkzeug.utils import secure_filename
 import traceback
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 
@@ -19,7 +24,13 @@ from models.unet_inference import UNetPredictor
 
 app = Flask(__name__)
 # CORS for frontend
-CORS(app, origins=["http://localhost:8080", "http://127.0.0.1:8080"], supports_credentials=True, expose_headers=["X-Model-Used"])
+CORS(app, origins=["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8081", "http://127.0.0.1:8081"], 
+     supports_credentials=True, 
+     expose_headers=["X-Model-Used"])
+
+# Initialize SocketIO for real-time communication
+socketio = SocketIO(app, cors_allowed_origins=["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8081", "http://127.0.0.1:8081"], 
+                    async_mode='threading')
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
@@ -31,7 +42,10 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Lazy-loaded predictors
+# Thread pool for parallel model inference
+executor = ThreadPoolExecutor(max_workers=4)
+
+# Model predictors - will be preloaded
 predictors = {
     'chexnet': None,
     'mura': None,
@@ -39,6 +53,18 @@ predictors = {
     'rsna': None,
     'unet': None
 }
+
+# Model loading status
+model_status = {
+    'chexnet': {'loaded': False, 'loading': False, 'error': None},
+    'mura': {'loaded': False, 'loading': False, 'error': None},
+    'tuberculosis': {'loaded': False, 'loading': False, 'error': None},
+    'rsna': {'loaded': False, 'loading': False, 'error': None},
+    'unet': {'loaded': False, 'loading': False, 'error': None}
+}
+
+# Analysis sessions for real-time tracking
+analysis_sessions = {}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -150,11 +176,14 @@ def infer_scan_type_from_image(filepath: str, ext: str) -> str:
     chest_score = 0.7 * max(symmetry, 0.0) + 0.3 * (1.0 - edge_density)
     bone_score = 0.7 * edge_density + 0.3 * (1.0 - max(symmetry, 0.0))
 
-    if chest_score > 0.58 and chest_score > bone_score + 0.05:
+    # Lower threshold for chest detection - most medical X-rays are chest X-rays
+    # Default to chest if uncertain since CheXNet handles general X-rays well
+    if chest_score > 0.45 and chest_score >= bone_score:
         return 'chest'
-    if bone_score > 0.58 and bone_score > chest_score + 0.05:
+    if bone_score > 0.55 and bone_score > chest_score + 0.1:
         return 'bone'
-    return 'unknown'
+    # Default to chest for unknown - CheXNet is more general purpose
+    return 'chest'
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -253,15 +282,22 @@ def predict(model_name):
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
+    print("\n" + "="*60)
+    print("🔬 NEW ANALYSIS REQUEST")
+    print("="*60)
+    
     if 'image' not in request.files and 'file' not in request.files:
+        print("❌ Error: No image file provided")
         return jsonify({'error': 'No image file provided'}), 400
     
     file = request.files.get('image') or request.files.get('file')
     
     if file.filename == '':
+        print("❌ Error: No file selected")
         return jsonify({'error': 'No file selected'}), 400
     
     if not allowed_file(file.filename):
+        print(f"❌ Error: File type not allowed - {file.filename}")
         return jsonify({'error': 'File type not allowed. Supported: PNG, JPG, JPEG, DICOM (.dcm)'}), 400
     
     try:
@@ -269,26 +305,19 @@ def analyze():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+        print(f"📁 File received: {filename}")
 
         scan_type = (request.form.get('scan_type') or request.args.get('scan_type') or 'auto').strip().lower()
         requested_model = (request.form.get('model') or request.args.get('model') or '').strip().lower()
         filename_lower = filename.lower()
         ext = os.path.splitext(filename_lower)[1].lstrip('.')
+        print(f"📋 Requested scan_type: {scan_type}, model: {requested_model or 'auto'}")
 
         if scan_type == 'auto':
             inferred_scan_type = infer_scan_type_from_image(filepath, ext)
-            if inferred_scan_type == 'unknown':
-                os.remove(filepath)
-                resp = jsonify([{
-                    'disease': 'Scan Type Required',
-                    'confidence': 0,
-                    'status': 'warning',
-                    'description': 'Unable to confidently determine scan type automatically. Please select Chest X-Ray or Bone X-Ray in the UI.',
-                    'regions': []
-                }])
-                resp.headers['X-Model-Used'] = 'none'
-                return resp, 422
+            # infer_scan_type_from_image now always returns a valid type (defaults to 'chest')
             scan_type = inferred_scan_type
+            print(f"🔍 Auto-detected scan type: {scan_type}")
 
         bone_keywords = ['wrist', 'hand', 'elbow', 'shoulder', 'humerus', 'finger', 'forearm', 'ankle', 'foot', 'knee', 'hip', 'bone', 'mura']
         ct_keywords = ['ct', 'brain', 'head', 'intracranial', 'rsna']
@@ -310,22 +339,29 @@ def analyze():
         else:
             selected_model = requested_model if requested_model in predictors else inferred_model
 
+        print(f"🎯 Selected model: {selected_model or 'auto (will try TB then CheXNet)'}")
+
         if selected_model == 'rsna':
+            print("🧠 Using RSNA model for CT/Brain analysis...")
             if not model_checkpoint_available('rsna'):
                 os.remove(filepath)
+                print("❌ RSNA model not available")
                 resp = jsonify(unavailable_model_result('rsna'))
                 resp.headers['X-Model-Used'] = 'rsna'
                 return resp
             predictor = get_predictor('rsna')
             result = predictor.predict_for_frontend(filepath)
             os.remove(filepath)
+            print(f"✅ RSNA Analysis Result: {result}")
             resp = jsonify(result)
             resp.headers['X-Model-Used'] = 'rsna'
             return resp
 
         if selected_model == 'mura':
+            print("🦴 Using MURA model for bone X-ray analysis...")
             if not model_checkpoint_available('mura'):
                 os.remove(filepath)
+                print("❌ MURA model not available")
                 resp = jsonify(unavailable_model_result('mura'))
                 resp.headers['X-Model-Used'] = 'mura'
                 return resp
@@ -333,63 +369,84 @@ def analyze():
                 predictor = get_predictor('mura')
                 result = predictor.predict_for_frontend(filepath)
                 os.remove(filepath)
+                print(f"✅ MURA Analysis Result: {result}\")")
                 resp = jsonify(result)
                 resp.headers['X-Model-Used'] = 'mura'
                 return resp
             except Exception as e:
                 os.remove(filepath)
+                print(f"❌ MURA Error: {e}")
                 resp = jsonify(model_error_result('mura', str(e)))
                 resp.headers['X-Model-Used'] = 'mura'
                 return resp, 500
         
+        # Try TB model for chest X-rays
+        print("🫁 Checking for Tuberculosis...")
         try:
             if not model_checkpoint_available('tuberculosis'):
                 raise Exception('Tuberculosis model checkpoint not found')
             tb_predictor = get_predictor('tuberculosis')
             tb_raw = tb_predictor.predict(filepath)
+            print(f"   TB raw result: Normal={tb_raw.get('normal_probability', 0):.2%}, TB={tb_raw.get('tuberculosis_probability', 0):.2%}")
             
             if 'is_tuberculosis' in tb_raw and tb_raw['is_tuberculosis']:
                 tb_prob = tb_raw.get('tuberculosis_probability', 0.0)
                 if tb_prob > 0.55:
+                    print(f"🔴 Tuberculosis DETECTED with {tb_prob:.2%} confidence!")
                     result = tb_predictor.predict_for_frontend(filepath)
                     os.remove(filepath)
+                    print(f"✅ TB Analysis Result: {result}")
                     resp = jsonify(result)
                     resp.headers['X-Model-Used'] = 'tuberculosis'
                     return resp
         except Exception as tb_error:
+            print(f"⚠️ TB model check failed: {tb_error}")
             app.logger.warning(f"TB model failed, falling back to CheXNet: {tb_error}")
 
         if scan_type != 'chest':
             try:
                 if model_checkpoint_available('mura'):
+                    print("🦴 Also checking MURA for non-chest scan...")
                     mura_predictor = get_predictor('mura')
                     mura_raw = mura_predictor.predict(filepath)
                     mura_prob = float(mura_raw.get('abnormality_probability', 0.0))
+                    print(f"   MURA abnormality probability: {mura_prob:.2%}")
                     if mura_prob > 0.65:
+                        print(f"🔴 MURA detected abnormality!")
                         result = mura_predictor.predict_for_frontend(filepath)
                         os.remove(filepath)
+                        print(f"✅ MURA Analysis Result: {result}")
                         resp = jsonify(result)
                         resp.headers['X-Model-Used'] = 'mura'
                         return resp
             except Exception as mura_error:
+                print(f"⚠️ MURA check failed: {mura_error}")
                 app.logger.warning(f"MURA model check failed, falling back to CheXNet: {mura_error}")
         
+        # Default to CheXNet for general chest X-ray analysis
+        print("🫁 Using CheXNet for chest X-ray analysis...")
         if not model_checkpoint_available('chexnet'):
             os.remove(filepath)
+            print("❌ CheXNet model not available")
             resp = jsonify(unavailable_model_result('chexnet'))
             resp.headers['X-Model-Used'] = 'chexnet'
             return resp
         try:
             predictor = get_predictor('chexnet')
             result = predictor.predict_for_frontend(filepath)
+            print(f"✅ CheXNet Analysis Result:")
+            for r in result:
+                print(f"   - {r['disease']}: {r['confidence']}% ({r['status']})")
         except Exception as e:
             os.remove(filepath)
+            print(f"❌ CheXNet Error: {e}")
             resp = jsonify(model_error_result('chexnet', str(e)))
             resp.headers['X-Model-Used'] = 'chexnet'
             return resp, 500
         
         # Clean up uploaded file
         os.remove(filepath)
+        print("=" * 60 + "\n")
         
         resp = jsonify(result)
         resp.headers['X-Model-Used'] = 'chexnet'

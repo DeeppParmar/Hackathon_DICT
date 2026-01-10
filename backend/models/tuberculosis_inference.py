@@ -28,17 +28,21 @@ class TuberculosisPredictor:
         self.model_path = None
         # Define the base path for TuberculosisNet
         tbnet_path = os.path.join(os.path.dirname(__file__), '..', 'datasets', 'TuberculosisNet')
+        # Prioritize Baseline which has .meta file, then TB-Net, then Epoch folders
         potential_paths = [
-            os.path.join(tbnet_path, 'models', 'Epoch_5'),
             os.path.join(tbnet_path, 'models', 'Baseline'),
             os.path.join(tbnet_path, 'TB-Net'),
+            os.path.join(tbnet_path, 'models', 'Epoch_5'),
+            os.path.join(tbnet_path, 'models', 'Epoch_0'),
         ]
         
         for path in potential_paths:
             if os.path.isdir(path):
-                # Check if it contains checkpoint files
+                # Check if it contains BOTH .index AND .meta files (required for TF checkpoint loading)
                 import glob
-                if glob.glob(os.path.join(path, '*.index')) or glob.glob(os.path.join(path, '*.meta')):
+                has_index = glob.glob(os.path.join(path, '*.index'))
+                has_meta = glob.glob(os.path.join(path, '*.meta'))
+                if has_index and has_meta:
                     self.model_path = path
                     break
         
@@ -99,14 +103,17 @@ class TuberculosisPredictor:
             for name in input_names:
                 try:
                     self.image_tensor = graph.get_tensor_by_name(name)
+                    print(f"Found input tensor: {name}")
                     break
                 except KeyError:
                     continue
             
-            output_names = ['resnet_model/final_dense:0', 'logits:0', 'output:0', 'predictions:0', 'dense/BiasAdd:0', 'fc/BiasAdd:0']
+            # TB-Net specific output: classification/add_1:0 (logits before softmax)
+            output_names = ['classification/add_1:0', 'classification/MatMul_1:0', 'resnet_model/final_dense:0', 'logits:0', 'output:0', 'predictions:0', 'dense/BiasAdd:0', 'fc/BiasAdd:0']
             for name in output_names:
                 try:
                     self.logits_tensor = graph.get_tensor_by_name(name)
+                    print(f"Found output tensor: {name}")
                     break
                 except KeyError:
                     continue
@@ -184,9 +191,11 @@ class TuberculosisPredictor:
                 image = self.preprocess_image_fallback(image_path)
             
             logits = self.sess.run(self.logits_tensor, feed_dict={self.image_tensor: [image]})[0]
-            softmax = self.sess.run(tf.nn.softmax(logits))
-            pred_class = softmax.argmax()
-            confidence = softmax[pred_class]
+            # Apply softmax manually using numpy to avoid TensorFlow graph issues
+            exp_logits = np.exp(logits - np.max(logits))  # Subtract max for numerical stability
+            softmax = exp_logits / np.sum(exp_logits)
+            pred_class = int(np.argmax(softmax))
+            confidence = float(softmax[pred_class])
             
             mapping = {0: "Normal", 1: "Tuberculosis"}
             prediction = mapping[pred_class]

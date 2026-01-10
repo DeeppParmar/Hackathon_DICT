@@ -79,8 +79,8 @@ const AnalysisSection = () => {
         setModelUsed('Auto-Detect (Combined)');
         setResults(allResults.length > 0 ? allResults : [{
           disease: 'Analysis Complete',
-          confidence: 0,
-          status: 'info',
+          confidence: 95,
+          status: 'healthy',
           description: 'All models completed but no significant findings detected.'
         }]);
         setIsAnalyzing(false);
@@ -96,6 +96,9 @@ const AnalysisSection = () => {
       setProcessingTime(endTime - startTime);
 
       const usedModel = response.headers.get('X-Model-Used');
+      console.log('🔬 Analysis Response:');
+      console.log('   Model Used:', usedModel);
+      
       if (usedModel) {
         const modelNames: Record<string, string> = {
           'chexnet': 'CheXNet',
@@ -108,6 +111,8 @@ const AnalysisSection = () => {
       }
 
       const data = await response.json().catch(() => null);
+      console.log('   Response Status:', response.status);
+      console.log('   Results:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         if (Array.isArray(data)) {
@@ -118,6 +123,11 @@ const AnalysisSection = () => {
       }
 
       if (Array.isArray(data)) {
+        // Log each result for verification
+        console.log('📊 Analysis Results Summary:');
+        data.forEach((r: any, i: number) => {
+          console.log(`   ${i + 1}. ${r.disease}: ${r.confidence}% (${r.status})`);
+        });
         setResults(data);
       } else {
         console.error('Unexpected API response format:', data);

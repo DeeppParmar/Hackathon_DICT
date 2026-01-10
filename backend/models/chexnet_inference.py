@@ -53,13 +53,21 @@ class CheXNetPredictor:
                 else:
                     state_dict = checkpoint
                 
-                # Remove 'module.' prefix and ensure correct key naming
+                # Remove 'module.' prefix and handle key format conversion
+                # Old torchvision: norm.1, conv.1  | New torchvision: norm1, conv1
+                import re
                 new_state_dict = {}
                 for k, v in state_dict.items():
-                    name = k[7:] if k.startswith('module.') else k
+                    # Remove 'module.' prefix
+                    if k.startswith('module.'):
+                        name = k[7:]
+                    else:
+                        name = k
                     
-                    if not name.startswith('densenet121.'):
-                        name = 'densenet121.' + name
+                    # Convert old-style keys (norm.1, conv.1) to new-style (norm1, conv1)
+                    # Pattern: denselayer1.norm.1 -> denselayer1.norm1
+                    name = re.sub(r'\.norm\.(\d+)', r'.norm\1', name)
+                    name = re.sub(r'\.conv\.(\d+)', r'.conv\1', name)
                     
                     new_state_dict[name] = v
                 
@@ -70,7 +78,8 @@ class CheXNetPredictor:
                                        if 'num_batches_tracked' not in k]
                     if len(critical_missing) > 0:
                         print(f"Warning: CheXNet checkpoint had {len(critical_missing)} missing keys")
-                        # Don't raise - try to load anyway
+                        # Print first few for debugging
+                        print(f"First missing keys: {critical_missing[:5]}")
                 
                 print(f"Loaded CheXNet model from {self.model_path}")
             else:

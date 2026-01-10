@@ -62,6 +62,8 @@ class RSNPredictor:
     
     def predict(self, image_path):
         try:
+            image_tensor = self.preprocess_image(image_path).to(self.device)
+            
             with torch.no_grad():
                 output = self.model(image_tensor)
                 probability = torch.sigmoid(output).cpu().numpy()[0][0]
