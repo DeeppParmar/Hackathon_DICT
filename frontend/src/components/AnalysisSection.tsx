@@ -1,6 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, RotateCcw } from "lucide-react";
 import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import ImageUpload from "./ImageUpload";
 import AnalysisResults, { AnalysisResult } from "./AnalysisResults";
 import { API_ENDPOINTS } from "@/config";
@@ -9,11 +16,69 @@ const AnalysisSection = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<AnalysisResult[] | null>(null);
+  const [scanType, setScanType] = useState<'auto' | 'chest' | 'bone' | 'ct'>('auto');
+
+  const runAnalysis = async (file: File) => {
+    setIsAnalyzing(true);
+    setResults(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      if (scanType !== 'auto') formData.append('scan_type', scanType);
+
+      const name = file.name.toLowerCase();
+      const isDicom = name.endsWith('.dcm');
+      const boneKeywords = ['wrist', 'hand', 'elbow', 'shoulder', 'humerus', 'finger', 'forearm', 'ankle', 'foot', 'knee', 'hip', 'bone', 'mura'];
+      const isBone = boneKeywords.some((k) => name.includes(k));
+      if (isDicom) formData.append('model', 'rsna');
+      else if (isBone) formData.append('model', 'mura');
+
+      const response = await fetch(API_ENDPOINTS.ANALYZE, {
+        method: 'POST',
+        body: formData
+      });
+
+      const modelUsed = response.headers.get('X-Model-Used');
+      if (modelUsed) console.log('Model used:', modelUsed);
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        if (Array.isArray(data)) {
+          setResults(data);
+          return;
+        }
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      if (Array.isArray(data)) {
+        setResults(data);
+      } else {
+        console.error('Unexpected API response format:', data);
+        throw new Error('Invalid response format from API');
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      alert(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setResults(null);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleImageSelect = (file: File) => {
     setSelectedImage(file);
     setResults(null);
+    void runAnalysis(file);
   };
+
+  useEffect(() => {
+    if (!selectedImage) return;
+    if (isAnalyzing) return;
+    void runAnalysis(selectedImage);
+  }, [scanType]);
 
   const handleClear = () => {
     setSelectedImage(null);
@@ -23,41 +88,7 @@ const AnalysisSection = () => {
 
   const handleAnalyze = async () => {
     if (!selectedImage) return;
-    
-    setIsAnalyzing(true);
-    setResults(null);
-    
-    try {
-      const formData = new FormData();
-      formData.append('image', selectedImage);
-      
-      // Call backend API
-      const response = await fetch(API_ENDPOINTS.ANALYZE, { 
-        method: 'POST', 
-        body: formData 
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Ensure data is an array
-      if (Array.isArray(data)) {
-        setResults(data);
-      } else {
-        console.error("Unexpected API response format:", data);
-        throw new Error("Invalid response format from API");
-      }
-    } catch (error) {
-      console.error("Analysis failed:", error);
-      // Show error to user (you can add toast notification here)
-      alert(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setResults(null);
-    } finally {
-      setIsAnalyzing(false);
-    }
+    await runAnalysis(selectedImage);
   };
 
   return (
@@ -80,6 +111,21 @@ const AnalysisSection = () => {
               selectedImage={selectedImage}
               onClear={handleClear}
             />
+
+            <div className="grid gap-2">
+              <div className="text-sm text-muted-foreground">Scan Type</div>
+              <Select value={scanType} onValueChange={(v) => setScanType(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Auto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto</SelectItem>
+                  <SelectItem value="chest">Chest X-Ray</SelectItem>
+                  <SelectItem value="bone">Bone X-Ray</SelectItem>
+                  <SelectItem value="ct">CT / DICOM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             
             <div className="flex gap-4">
               <Button

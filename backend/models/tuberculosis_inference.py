@@ -31,13 +31,17 @@ except ImportError:
 
 class TuberculosisPredictor:
     def __init__(self):
-        # Use the trained model from models/Baseline/TB-Net
-        self.model_path = os.path.join(tbnet_path, 'models', 'Baseline', 'TB-Net')
-        # Try trained model, fallback to original checkpoint
-        if not os.path.exists(self.model_path):
-            self.model_path = os.path.join(tbnet_path, 'TB-Net')
-        self.meta_name = 'model_eval.meta'
-        self.ckpt_name = 'TB-Net'
+        baseline_dir = os.path.join(tbnet_path, 'models', 'Baseline')
+        legacy_dir = os.path.join(tbnet_path, 'TB-Net')
+
+        if os.path.isdir(baseline_dir):
+            self.model_path = baseline_dir
+        elif os.path.isdir(legacy_dir):
+            self.model_path = legacy_dir
+        else:
+            self.model_path = baseline_dir
+        self.meta_name = None
+        self.ckpt_name = None
         self.sess = None
         self.image_tensor = None
         self.logits_tensor = None
@@ -59,21 +63,25 @@ class TuberculosisPredictor:
                 tf.logging.set_verbosity(tf.logging.ERROR)
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
             
-            # Try to find meta file and checkpoint
-            meta_path = os.path.join(self.model_path, self.meta_name)
-            ckpt_path = os.path.join(self.model_path, self.ckpt_name)
-            
-            # Check for trained checkpoint files
-            if not os.path.exists(meta_path):
-                # Try looking for any .meta file
-                import glob
-                meta_files = glob.glob(os.path.join(self.model_path, '*.meta'))
-                if meta_files:
-                    meta_path = meta_files[0]
-                    print(f"Using meta file: {meta_path}")
-                else:
-                    print(f"Warning: TB-Net model files not found. Expected at {self.model_path}")
-                    return
+            meta_path = None
+            ckpt_prefix = None
+
+            import glob
+            index_files = sorted(glob.glob(os.path.join(self.model_path, '*.index')))
+            if index_files:
+                ckpt_prefix = os.path.splitext(os.path.basename(index_files[0]))[0]
+
+            meta_files = sorted(glob.glob(os.path.join(self.model_path, '*.meta')))
+            if meta_files:
+                meta_path = meta_files[0]
+                if ckpt_prefix is None:
+                    ckpt_prefix = os.path.splitext(os.path.basename(meta_path))[0]
+
+            if meta_path is None or ckpt_prefix is None:
+                print(f"Warning: TB-Net model files not found. Expected at {self.model_path}")
+                return
+
+            ckpt_path = os.path.join(self.model_path, ckpt_prefix)
             
             self.sess = tf.Session()
             saver = tf.train.import_meta_graph(meta_path)

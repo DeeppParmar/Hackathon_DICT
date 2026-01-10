@@ -24,7 +24,10 @@ class DenseNet121(nn.Module):
     """Model modified for CheXNet"""
     def __init__(self, out_size):
         super(DenseNet121, self).__init__()
-        self.densenet121 = torchvision.models.densenet121(pretrained=True)
+        try:
+            self.densenet121 = torchvision.models.densenet121(weights=None)
+        except TypeError:
+            self.densenet121 = torchvision.models.densenet121(pretrained=False)
         num_ftrs = self.densenet121.classifier.in_features
         self.densenet121.classifier = nn.Sequential(
             nn.Linear(num_ftrs, out_size),
@@ -64,11 +67,13 @@ class CheXNetPredictor:
                     name = k[7:] if k.startswith('module.') else k
                     new_state_dict[name] = v
                 
-                self.model.load_state_dict(new_state_dict, strict=False)
+                load_res = self.model.load_state_dict(new_state_dict, strict=False)
+                if getattr(load_res, 'missing_keys', None):
+                    if len(load_res.missing_keys) > 0:
+                        raise RuntimeError(f"CheXNet checkpoint missing keys: {load_res.missing_keys[:10]}")
                 print(f"✓ Loaded CheXNet model from {self.model_path}")
             else:
-                print(f"Warning: Model file not found at {self.model_path}. Using pretrained weights only.")
-                # Model will use pretrained ImageNet weights
+                raise FileNotFoundError(f"Model file not found at {self.model_path}")
             
             self.model = self.model.to(self.device)
             self.model.eval()
@@ -77,10 +82,7 @@ class CheXNetPredictor:
             print(f"Error loading CheXNet model: {e}")
             import traceback
             traceback.print_exc()
-            # Create model with pretrained weights as fallback
-            self.model = DenseNet121(N_CLASSES).to(self.device)
-            self.model.eval()
-            print(f"✓ Using CheXNet model with pretrained ImageNet weights only")
+            raise
     
     def preprocess_image(self, image_path):
         """Preprocess image for CheXNet"""
@@ -115,8 +117,7 @@ class CheXNetPredictor:
             # Predict
             with torch.no_grad():
                 output = self.model(input_var)
-                # Apply sigmoid and get probabilities
-                probabilities = torch.sigmoid(output).cpu().numpy()[0]
+                probabilities = output.cpu().numpy()[0]
             
             # Format results
             results = {}

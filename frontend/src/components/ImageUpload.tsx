@@ -17,13 +17,23 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
     setIsDragOver(false);
     
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type.startsWith('image/')) {
-      handleFileSelect(files[0]);
+    if (files.length > 0) {
+      const f = files[0];
+      const isDicom = f.name.toLowerCase().endsWith('.dcm');
+      const isImage = f.type.startsWith('image/');
+      if (isImage || isDicom) {
+        handleFileSelect(f);
+      }
     }
   }, []);
 
   const handleFileSelect = (file: File) => {
     onImageSelect(file);
+    const isDicom = file.name.toLowerCase().endsWith('.dcm');
+    if (isDicom) {
+      setPreview(null);
+      return;
+    }
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
@@ -58,7 +68,7 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
         >
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,.dcm"
             onChange={handleInputChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
@@ -95,11 +105,17 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
       ) : (
         <div className="relative rounded-2xl overflow-hidden glass-card">
           <div className="aspect-square max-h-[400px] relative bg-black/50">
-            <img
-              src={preview || ''}
-              alt="Uploaded medical image"
-              className="w-full h-full object-contain"
-            />
+            {preview ? (
+              <img
+                src={preview}
+                alt="Uploaded medical image"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+                Preview Not Available
+              </div>
+            )}
             
             {/* Scan Effect Overlay */}
             <div className="absolute inset-0 pointer-events-none">

@@ -97,3 +97,50 @@ class RSNPredictor:
         except Exception as e:
             raise Exception(f"Error in RSNA prediction: {str(e)}")
 
+    def predict_for_frontend(self, image_path):
+        """Predict and format results for frontend React component"""
+        try:
+            raw_result = self.predict(image_path)
+
+            prob = float(raw_result.get('hemorrhage_probability', 0.0))
+            is_hemo = bool(raw_result.get('is_hemorrhage', False))
+
+            if is_hemo:
+                status = 'critical' if prob > 0.75 else 'warning'
+                return [{
+                    'disease': 'Intracranial Hemorrhage',
+                    'confidence': int(prob * 100),
+                    'status': status,
+                    'description': 'Possible intracranial hemorrhage detected. Seek urgent medical evaluation by a qualified clinician.',
+                    'regions': ['Intracranial']
+                }, {
+                    'disease': 'Normal Scan',
+                    'confidence': int((1.0 - prob) * 100),
+                    'status': 'healthy',
+                    'description': 'Some features may still appear within normal limits.',
+                    'regions': []
+                }]
+
+            return [{
+                'disease': 'Healthy Scan (CT)',
+                'confidence': int((1.0 - prob) * 100),
+                'status': 'healthy',
+                'description': 'No intracranial hemorrhage detected by the model.',
+                'regions': []
+            }, {
+                'disease': 'Hemorrhage Risk',
+                'confidence': int(prob * 100),
+                'status': 'healthy',
+                'description': 'Low hemorrhage probability.',
+                'regions': []
+            }]
+
+        except Exception as e:
+            return [{
+                'disease': 'Analysis Error',
+                'confidence': 0,
+                'status': 'warning',
+                'description': f'Error analyzing image for intracranial hemorrhage: {str(e)}',
+                'regions': []
+            }]
+

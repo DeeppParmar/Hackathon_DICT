@@ -24,9 +24,20 @@ class MURAPredictor:
     def __init__(self):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = None
-        self.model_path = os.path.join(
-            os.path.dirname(__file__), '..', 'datasets', 'DenseNet-MURA', 'models', 'model.pth'
+        self.output_is_probability = False
+        base_models_dir = os.path.join(
+            os.path.dirname(__file__), '..', 'datasets', 'DenseNet-MURA', 'models'
         )
+        preferred = os.path.join(base_models_dir, 'XR_WRIST', 'model.pth')
+        if os.path.isfile(preferred):
+            self.model_path = preferred
+        else:
+            found = None
+            for root, _, files in os.walk(base_models_dir):
+                if 'model.pth' in files:
+                    found = os.path.join(root, 'model.pth')
+                    break
+            self.model_path = found or preferred
         self.load_model()
     
     def load_model(self):
@@ -35,28 +46,38 @@ class MURAPredictor:
             if densenet169 is None:
                 # Use torchvision DenseNet as fallback
                 import torchvision.models as models
-                self.model = models.densenet169(pretrained=True)
+                try:
+                    self.model = models.densenet169(weights=None)
+                except TypeError:
+                    self.model = models.densenet169(pretrained=False)
                 self.model.classifier = nn.Linear(self.model.classifier.in_features, 1)
+                self.output_is_probability = False
             else:
-                self.model = densenet169(pretrained=True)
-                self.model.classifier = nn.Linear(self.model.classifier.in_features, 1)
+                self.model = densenet169(pretrained=False)
+                self.output_is_probability = True
             
             if os.path.isfile(self.model_path):
-                self.model.load_state_dict(torch.load(self.model_path, map_location=self.device))
+                state = torch.load(self.model_path, map_location=self.device)
+                if isinstance(state, dict):
+                    if 'model_state_dict' in state:
+                        state = state['model_state_dict']
+                    elif 'state_dict' in state:
+                        state = state['state_dict']
+                if isinstance(state, dict):
+                    state = { (k[7:] if k.startswith('module.') else k): v for k, v in state.items() }
+                load_res = self.model.load_state_dict(state, strict=False)
+                if getattr(load_res, 'missing_keys', None):
+                    if len(load_res.missing_keys) > 0:
+                        raise RuntimeError(f"MURA checkpoint missing keys: {load_res.missing_keys[:10]}")
                 print(f"Loaded MURA model from {self.model_path}")
             else:
-                print(f"Warning: Model file not found at {self.model_path}. Using pretrained weights only.")
+                raise FileNotFoundError(f"Model file not found at {self.model_path}")
             
             self.model = self.model.to(self.device)
             self.model.eval()
         except Exception as e:
             print(f"Error loading MURA model: {e}")
-            # Create model with pretrained weights as fallback
-            import torchvision.models as models
-            self.model = models.densenet169(pretrained=True)
-            self.model.classifier = nn.Linear(self.model.classifier.in_features, 1)
-            self.model = self.model.to(self.device)
-            self.model.eval()
+            raise
     
     def preprocess_image(self, image_path):
         """Preprocess image for MURA"""
@@ -83,8 +104,14 @@ class MURAPredictor:
             # Predict
             with torch.no_grad():
                 output = self.model(image_tensor)
-                # Apply sigmoid for binary classification
-                probability = torch.sigmoid(output).cpu().numpy()[0][0]
+                out = output
+                if isinstance(out, (list, tuple)):
+                    out = out[0]
+                out = out.view(-1)[0]
+                if self.output_is_probability:
+                    probability = float(out.cpu().numpy())
+                else:
+                    probability = float(torch.sigmoid(out).cpu().numpy())
             
             is_abnormal = probability > 0.5
             
@@ -99,4 +126,53 @@ class MURAPredictor:
         
         except Exception as e:
             raise Exception(f"Error in MURA prediction: {str(e)}")
+
+    def predict_for_frontend(self, image_path):
+        """Predict and format results for frontend React component"""
+        try:
+            raw_result = self.predict(image_path)
+
+            prob = float(raw_result.get('abnormality_probability', 0.0))
+            is_abnormal = bool(raw_result.get('is_abnormal', False))
+
+            if is_abnormal:
+                status = 'critical' if prob > 0.75 else 'warning'
+                primary = {
+                    'disease': 'Musculoskeletal Abnormality',
+                    'confidence': int(prob * 100),
+                    'status': status,
+                    'description': 'Abnormality detected in musculoskeletal radiograph. Please consult an orthopedic specialist for confirmation.',
+                    'regions': []
+                }
+                secondary = {
+                    'disease': 'Normal Tissue',
+                    'confidence': int((1.0 - prob) * 100),
+                    'status': 'healthy',
+                    'description': 'Some regions appear within normal limits.',
+                    'regions': []
+                }
+                return [primary, secondary]
+
+            return [{
+                'disease': 'Healthy Scan (Bone)',
+                'confidence': int((1.0 - prob) * 100),
+                'status': 'healthy',
+                'description': 'No significant musculoskeletal abnormality detected.',
+                'regions': []
+            }, {
+                'disease': 'Abnormality Risk',
+                'confidence': int(prob * 100),
+                'status': 'healthy',
+                'description': 'Low abnormality probability.',
+                'regions': []
+            }]
+
+        except Exception as e:
+            return [{
+                'disease': 'Analysis Error',
+                'confidence': 0,
+                'status': 'warning',
+                'description': f'Error analyzing image for musculoskeletal abnormality: {str(e)}',
+                'regions': []
+            }]
 

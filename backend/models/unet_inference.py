@@ -155,3 +155,39 @@ class UNetPredictor:
         except Exception as e:
             raise Exception(f"Error in UNet prediction: {str(e)}")
 
+    def predict_for_frontend(self, image_path):
+        """Predict and format results for frontend React component"""
+        try:
+            raw_result = self.predict(image_path)
+
+            pct = float(raw_result.get('disease_percentage', 0.0))
+            has_disease = bool(raw_result.get('has_disease', False))
+            confidence = int(min(max(pct, 0.0), 100.0))
+
+            if has_disease:
+                status = 'critical' if pct > 20.0 else 'warning'
+                return [{
+                    'disease': 'Abnormal Region (Segmentation)',
+                    'confidence': confidence,
+                    'status': status,
+                    'description': 'Segmented abnormal region detected. This indicates the model found a notable area that differs from surrounding tissue.',
+                    'regions': []
+                }]
+
+            return [{
+                'disease': 'No Significant Abnormal Region',
+                'confidence': int(100 - confidence),
+                'status': 'healthy',
+                'description': 'Segmentation model did not find a large abnormal region above threshold.',
+                'regions': []
+            }]
+
+        except Exception as e:
+            return [{
+                'disease': 'Analysis Error',
+                'confidence': 0,
+                'status': 'warning',
+                'description': f'Error analyzing image for segmentation: {str(e)}',
+                'regions': []
+            }]
+
