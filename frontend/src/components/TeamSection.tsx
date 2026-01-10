@@ -30,17 +30,17 @@ const team = [
 
 const TeamSection = () => {
   return (
-    <section className="py-20 relative">
+    <section className="py-20 border-t border-border/50" id="team">
       <div className="container mx-auto px-6">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-4">
-            <span className="font-display font-semibold gradient-text">Team Phoenix</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-border mb-4">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Team Phoenix</span>
           </div>
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-            Meet Our Team
+          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+            Development Team
           </h2>
-          <p className="text-muted-foreground">
-            Passionate Innovators Driving Change At DA-IICT 2026 Hackathon
+          <p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed">
+            Collaborating on Medical AI at DA-IICT 2026 Hackathon
           </p>
         </div>
 

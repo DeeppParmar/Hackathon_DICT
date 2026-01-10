@@ -15,7 +15,7 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const f = files[0];
@@ -61,8 +61,8 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 cursor-pointer group
-            ${isDragOver 
-              ? 'border-primary bg-primary/5 scale-[1.02]' 
+            ${isDragOver
+              ? 'border-primary bg-primary/5 scale-[1.02]'
               : 'border-border hover:border-primary/50 hover:bg-card/50'
             }`}
         >
@@ -72,16 +72,14 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
             onChange={handleInputChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
-          
+
           <div className="flex flex-col items-center gap-4">
-            <div className={`p-4 rounded-2xl transition-all duration-300 ${
-              isDragOver ? 'bg-primary/20' : 'bg-secondary group-hover:bg-primary/10'
-            }`}>
-              <Upload className={`w-10 h-10 transition-colors ${
-                isDragOver ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'
-              }`} />
+            <div className={`p-4 rounded-2xl transition-all duration-300 ${isDragOver ? 'bg-primary/20' : 'bg-secondary group-hover:bg-primary/10'
+              }`}>
+              <Upload className={`w-10 h-10 transition-colors ${isDragOver ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'
+                }`} />
             </div>
-            
+
             <div>
               <p className="font-display font-semibold text-lg mb-1">
                 {isDragOver ? 'Drop Your Image Here' : 'Upload Medical Image'}
@@ -116,14 +114,13 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
                 Preview Not Available
               </div>
             )}
-            
-            {/* Scan Effect Overlay */}
+
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute inset-0 border-2 border-primary/30 rounded-lg m-4" />
               <div className="absolute top-0 left-4 right-4 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-scan" />
             </div>
           </div>
-          
+
           <div className="p-4 flex items-center justify-between border-t border-border/50">
             <div className="flex items-center gap-3">
               <Image className="w-5 h-5 text-primary" />
@@ -134,7 +131,7 @@ const ImageUpload = ({ onImageSelect, selectedImage, onClear }: ImageUploadProps
                 </p>
               </div>
             </div>
-            
+
             <Button variant="ghost" size="icon" onClick={handleClear}>
               <X className="w-4 h-4" />
             </Button>

@@ -6,29 +6,26 @@ const Footer = () => {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 border border-primary/30">
+            <div className="p-2 rounded-lg bg-secondary border border-border">
               <Activity className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="font-display font-bold">
-                Medi<span className="gradient-text">Scan</span> AI
+              <p className="font-display font-bold text-sm">
+                MediScan <span className="text-primary">AI</span>
               </p>
-              <p className="text-xs text-muted-foreground">AI That Cares, Technology That Heals</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Clinical Image Analysis</p>
             </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              Built With <Heart className="w-4 h-4 text-destructive fill-destructive" /> By Team Phoenix
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              DA-IICT Hackathon 2026
+          <div className="text-center md:text-left">
+            <p className="text-xs text-muted-foreground">
+              Clinical Image Analysis Platform
             </p>
           </div>
 
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">
-              © 2026 Team Phoenix. For Educational Purposes Only.
+          <div className="text-center md:text-right">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+              © 2026 MediScan AI
             </p>
           </div>
         </div>

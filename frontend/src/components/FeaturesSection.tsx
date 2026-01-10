@@ -3,51 +3,36 @@ import { Cpu, Eye, Zap, Shield, Layers, Lightbulb } from "lucide-react";
 const features = [
   {
     icon: Cpu,
-    title: "Deep Learning CNN",
-    description: "ResNet-50 Backbone With Attention Mechanisms For Precise Feature Extraction",
-  },
-  {
-    icon: Eye,
-    title: "Contour Mapping",
-    description: "Visual Overlays Highlighting Abnormal Regions For Easy Interpretation",
+    title: "AI Analysis",
+    description: "Deep learning models for precise feature extraction across medical imaging.",
   },
   {
     icon: Lightbulb,
     title: "Explainable AI",
-    description: "Grad-CAM Visualization Shows Exactly Why The Model Made Its Decision",
+    description: "Visualization shows exactly why the model made its decision.",
   },
   {
     icon: Zap,
-    title: "Real-Time Processing",
-    description: "Get Results In Under 3 Seconds With Optimized Inference Pipeline",
-  },
-  {
-    icon: Layers,
-    title: "Multi-Disease Detection",
-    description: "Simultaneously Detect TB, Pneumonia, And Bone Fractures",
+    title: "Fast Results",
+    description: "Get analysis in seconds with our optimized inference pipeline.",
   },
   {
     icon: Shield,
-    title: "Clinical-Grade Accuracy",
-    description: "95%+ Accuracy Validated Against Expert Radiologist Diagnoses",
+    title: "Multi-Disease",
+    description: "Detect Tuberculosis, Pneumonia, and Bone Abnormalities in one platform.",
   },
 ];
 
 const FeaturesSection = () => {
   return (
-    <section className="py-20 relative">
-      <div className="absolute inset-0 opacity-50">
-        <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-3xl" />
-      </div>
-      
+    <section className="py-20 border-t border-border/50" id="features">
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-            Powered By <span className="gradient-text">Advanced AI</span>
+          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+            Integrated <span className="text-primary">Intelligence</span>
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            State-Of-The-Art Deep Learning Technology Designed For Resource-Limited Healthcare Settings
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm">
+            Our platform utilizes standardized deep learning architectures for clinical diagnostic support.
           </p>
         </div>
 

@@ -175,66 +175,57 @@ const AnalysisSection = () => {
           </p>
         </div>
 
-        {/* Scan Type Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
-          {scanTypeOptions.map((option) => {
-            const Icon = option.icon;
-            const isSelected = scanType === option.id;
-            return (
-              <button
-                key={option.id}
-                onClick={() => setScanType(option.id)}
-                disabled={isAnalyzing}
-                className={`relative p-4 rounded-xl border-2 transition-all duration-300 text-left group
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '0.3s' }}>          {scanTypeOptions.map((option) => {
+          const Icon = option.icon;
+          const isSelected = scanType === option.id;
+          return (
+            <button
+              key={option.id}
+              onClick={() => setScanType(option.id)}
+              disabled={isAnalyzing}
+              className={`relative p-5 rounded-lg border transition-all duration-200 text-left
                   ${isSelected
-                    ? 'border-primary bg-primary/10 scale-[1.02] shadow-lg shadow-primary/20'
-                    : 'border-border hover:border-primary/50 hover:bg-card/50'
-                  }
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                  : 'border-border bg-card'
+                }
                   ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
-              >
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${option.color} flex items-center justify-center mb-3 
-                  ${isSelected ? 'scale-110' : 'group-hover:scale-105'} transition-transform`}>
-                  <Icon className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="font-semibold text-sm mb-1">{option.label}</h3>
-                <p className="text-xs text-muted-foreground">{option.description}</p>
-                {isSelected && (
-                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                )}
-              </button>
-            );
-          })}
+            >
+              <div className={`w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-4 border border-border
+                  ${isSelected ? 'bg-primary/10 border-primary/20' : ''}`}>
+                <Icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+              </div>
+              <h3 className="font-bold text-sm mb-1">{option.label}</h3>
+              <p className="text-[11px] text-muted-foreground leading-tight">{option.description}</p>
+            </button>
+          );
+        })}
         </div>
 
-        {/* Model Info Badge */}
-        {(modelUsed || isAnalyzing) && (
-          <div className="flex items-center justify-center gap-4 mb-6">
+        {(modelUsed || isAnalyzing) && (<div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border">
+            <Cpu className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">
+              {isAnalyzing ? 'Processing...' : `Model: ${modelUsed}`}
+            </span>
+          </div>
+          {processingTime && !isAnalyzing && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border">
-              <Cpu className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">
-                {isAnalyzing ? 'Processing...' : `Model: ${modelUsed}`}
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {(processingTime / 1000).toFixed(2)}s
               </span>
             </div>
-            {processingTime && !isAnalyzing && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {(processingTime / 1000).toFixed(2)}s
-                </span>
-              </div>
-            )}
-          </div>
+          )}
+        </div>
         )}
 
         <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Upload Section */}
-          <div className="space-y-6">
-            <ImageUpload
-              onImageSelect={handleImageSelect}
-              selectedImage={selectedImage}
-              onClear={handleClear}
-            />
+          <div className="space-y-6">            <ImageUpload
+            onImageSelect={handleImageSelect}
+            selectedImage={selectedImage}
+            onClear={handleClear}
+          />
 
             <div className="flex gap-4">
               <Button
@@ -262,9 +253,7 @@ const AnalysisSection = () => {
             </div>
           </div>
 
-          {/* Results Section */}
-          <div>
-            <AnalysisResults results={results} isAnalyzing={isAnalyzing} modelUsed={modelUsed} />
+          <div>            <AnalysisResults results={results} isAnalyzing={isAnalyzing} modelUsed={modelUsed} />
           </div>
         </div>
       </div>

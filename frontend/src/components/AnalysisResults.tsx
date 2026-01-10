@@ -84,22 +84,20 @@ const AnalysisResults = ({ results, isAnalyzing, modelUsed }: AnalysisResultsPro
 
   return (
     <div className="space-y-4">
-      {/* Primary Result */}
-      <div className={`glass-card rounded-2xl p-6 border ${config.borderColor}`}>
-        <div className="flex items-start gap-4 mb-6">
-          <div className={`p-3 rounded-xl ${config.bgColor}`}>
-            <StatusIcon className={`w-6 h-6 ${config.color}`} />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-1">
-              <h3 className="font-display font-bold text-xl">{primaryResult.disease}</h3>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.color}`}>
-                {primaryResult.status === 'healthy' ? 'Normal' : primaryResult.status === 'warning' ? 'Detected' : 'High Risk'}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">{primaryResult.description}</p>
-          </div>
+      <div className={`glass-card rounded-2xl p-6 border ${config.borderColor}`}>        <div className="flex items-start gap-4 mb-6">
+        <div className={`p-3 rounded-xl ${config.bgColor}`}>
+          <StatusIcon className={`w-6 h-6 ${config.color}`} />
         </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="font-display font-bold text-xl">{primaryResult.disease}</h3>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.color}`}>
+              {primaryResult.status === 'healthy' ? 'Normal' : primaryResult.status === 'warning' ? 'Detected' : 'High Risk'}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">{primaryResult.description}</p>
+        </div>
+      </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
@@ -126,7 +124,6 @@ const AnalysisResults = ({ results, isAnalyzing, modelUsed }: AnalysisResultsPro
         )}
       </div>
 
-      {/* Secondary Results */}
       {results.slice(1).map((result, index) => {
         const resultConfig = statusConfig[result.status];
         const ResultIcon = resultConfig.icon;
@@ -149,9 +146,7 @@ const AnalysisResults = ({ results, isAnalyzing, modelUsed }: AnalysisResultsPro
         );
       })}
 
-      {/* Disclaimer */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
-        <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">        <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground">
           This AI Analysis Is For Research And Educational Purposes Only. Always Consult A Qualified Healthcare Professional For Medical Diagnosis And Treatment.
         </p>
