@@ -26,6 +26,8 @@ class TuberculosisPredictor:
     def __init__(self):
         # Try multiple checkpoint locations
         self.model_path = None
+        # Define the base path for TuberculosisNet
+        tbnet_path = os.path.join(os.path.dirname(__file__), '..', 'datasets', 'TuberculosisNet')
         potential_paths = [
             os.path.join(tbnet_path, 'models', 'Epoch_5'),
             os.path.join(tbnet_path, 'models', 'Baseline'),
@@ -84,7 +86,6 @@ class TuberculosisPredictor:
                 print(f"No meta file found for checkpoint in {self.model_path}")
                 return
             
-        try:
             config = tf.ConfigProto()
             config.gpu_options.allow_growth = True
             self.sess = tf.Session(config=config)
@@ -118,7 +119,6 @@ class TuberculosisPredictor:
                 # List available tensors for debugging
                 ops = [op.name for op in graph.get_operations() if 'Placeholder' in op.name or 'input' in op.name.lower() or 'output' in op.name.lower() or 'dense' in op.name.lower()]
                 print(f"Available operations: {ops[:10]}")
-                
         except Exception as e:
             print(f"Error loading Tuberculosis model: {e}")
             self.sess = None
@@ -135,7 +135,7 @@ class TuberculosisPredictor:
         
         return image
     
-        try:
+    def predict(self, image_path):
         try:
             if not self.model_loaded or self.sess is None:
                 try:

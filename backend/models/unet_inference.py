@@ -103,7 +103,6 @@ class UNetPredictor:
             image_tensor, original_size = self.preprocess_image(image_path)
             image_tensor = image_tensor.to(self.device)
             
-        try:
             with torch.no_grad():
                 output = self.model(image_tensor)
                 output = F.interpolate(output, size=original_size[::-1], mode='bilinear', align_corners=False)
