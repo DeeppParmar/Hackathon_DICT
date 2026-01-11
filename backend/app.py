@@ -707,6 +707,8 @@ def analyze():
                 print(f"⚠️ MURA check failed: {mura_error}")
         
         # Only try TB model for chest X-rays (not unknown)
+        tb_checked = False
+        tb_is_positive = False
         if scan_type == 'chest':
             print("🫁 Checking for Tuberculosis...")
             try:
@@ -714,18 +716,24 @@ def analyze():
                     raise Exception('Tuberculosis model checkpoint not found')
                 tb_predictor = get_predictor('tuberculosis')
                 tb_raw = tb_predictor.predict(filepath)
-                print(f"   TB raw result: Normal={tb_raw.get('normal_probability', 0):.2%}, TB={tb_raw.get('tuberculosis_probability', 0):.2%}")
+                tb_prob = tb_raw.get('tuberculosis_probability', 0.0)
+                normal_prob = tb_raw.get('normal_probability', 0.0)
+                print(f"   TB raw result: Normal={normal_prob:.2%}, TB={tb_prob:.2%}")
+                tb_checked = True
                 
-                if 'is_tuberculosis' in tb_raw and tb_raw['is_tuberculosis']:
-                    tb_prob = tb_raw.get('tuberculosis_probability', 0.0)
-                    if tb_prob > 0.55:
-                        print(f"🔴 Tuberculosis DETECTED with {tb_prob:.2%} confidence!")
-                        result = tb_predictor.predict_for_frontend(filepath)
-                        os.remove(filepath)
-                        print(f"✅ TB Analysis Result: {result}")
-                        resp = jsonify(result)
-                        resp.headers['X-Model-Used'] = 'tuberculosis'
-                        return resp
+                # If TB is detected with confidence > 55%, use TB model immediately
+                if 'is_tuberculosis' in tb_raw and tb_raw['is_tuberculosis'] and tb_prob > 0.55:
+                    print(f"🔴 Tuberculosis DETECTED with {tb_prob:.2%} confidence!")
+                    tb_is_positive = True
+                    result = tb_predictor.predict_for_frontend(filepath)
+                    os.remove(filepath)
+                    print(f"✅ TB Analysis Result: {result}")
+                    resp = jsonify(result)
+                    resp.headers['X-Model-Used'] = 'tuberculosis'
+                    return resp
+                # For normal TB result, continue to CheXNet to check for other conditions (pneumonia, etc.)
+                else:
+                    print(f"✅ No TB detected (Normal={normal_prob:.2%}), checking CheXNet for other conditions...")
             except Exception as tb_error:
                 print(f"⚠️ TB model check failed: {tb_error}")
                 app.logger.warning(f"TB model failed, falling back to CheXNet: {tb_error}")
